@@ -191,7 +191,18 @@ func (m *Manager) getLoadBalancerServiceHandler(
 		return nil, err
 	}
 
-	balancer, err := m.getLoadBalancer(ctx, serviceName, service, handler)
+	algo := service.Algorithm
+	var balancer healthcheck.BalancerHandler
+
+	switch {
+	case algo.LowestResponseTime != nil:
+		balancer, err = m.getLowestResponseTimeBalancer(ctx, serviceName, service, handler)
+	case algo.LeastUtilized != nil:
+		balancer, err = m.getLeastUtilizedBalancer(ctx, serviceName, service, handler)
+	default:
+		balancer, err = m.getRoundRobinLoadBalancer(ctx, serviceName, service, handler)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -286,9 +297,14 @@ func buildHealthCheckOptions(ctx context.Context, lb healthcheck.Balancer, backe
 	}
 }
 
+// Deprecated: use getRoundRobinLoadBalancer
 func (m *Manager) getLoadBalancer(ctx context.Context, serviceName string, service *dynamic.ServersLoadBalancer, fwd http.Handler) (healthcheck.BalancerHandler, error) {
+	return m.getRoundRobinLoadBalancer(ctx, serviceName, service, fwd)
+}
+
+func (m *Manager) getRoundRobinLoadBalancer(ctx context.Context, serviceName string, service *dynamic.ServersLoadBalancer, fwd http.Handler) (healthcheck.BalancerHandler, error) {
 	logger := log.FromContext(ctx)
-	logger.Debug("Creating load-balancer")
+	logger.Debug("Creating round-robin load-balancer")
 
 	var options []roundrobin.LBOption
 
@@ -318,6 +334,18 @@ func (m *Manager) getLoadBalancer(ctx context.Context, serviceName string, servi
 	}
 
 	return lbsu, nil
+}
+
+func (m *Manager) getLowestResponseTimeBalancer(ctx context.Context, serviceName string, service *dynamic.ServersLoadBalancer, fwd http.Handler) (healthcheck.BalancerHandler, error) {
+	logger := log.FromContext(ctx)
+	logger.Debug("Creating lowest response time load-balancer")
+	panic("not implemented") // TODO
+}
+
+func (m *Manager) getLeastUtilizedBalancer(ctx context.Context, serviceName string, service *dynamic.ServersLoadBalancer, fwd http.Handler) (healthcheck.BalancerHandler, error) {
+	logger := log.FromContext(ctx)
+	logger.Debug("Creating least utilized load-balancer")
+	panic("not implemented") // TODO
 }
 
 func (m *Manager) upsertServers(ctx context.Context, lb healthcheck.BalancerHandler, servers []dynamic.Server) error {

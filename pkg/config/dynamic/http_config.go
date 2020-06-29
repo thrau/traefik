@@ -2,6 +2,7 @@ package dynamic
 
 import (
 	"reflect"
+	"time"
 
 	"github.com/containous/traefik/v2/pkg/types"
 )
@@ -125,6 +126,7 @@ type ServersLoadBalancer struct {
 	HealthCheck        *HealthCheck        `json:"healthCheck,omitempty" toml:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	PassHostHeader     *bool               `json:"passHostHeader" toml:"passHostHeader" yaml:"passHostHeader"`
 	ResponseForwarding *ResponseForwarding `json:"responseForwarding,omitempty" toml:"responseForwarding,omitempty" yaml:"responseForwarding,omitempty"`
+	Algorithm          *Algorithm          `json:"algorithm,omitempty" toml:"algorithm,omitempty" yaml:"algorithm,omitempty"`
 }
 
 // Mergeable tells if the given service is mergeable.
@@ -148,6 +150,43 @@ func (l *ServersLoadBalancer) Mergeable(loadBalancer *ServersLoadBalancer) bool 
 func (l *ServersLoadBalancer) SetDefaults() {
 	defaultPassHostHeader := true
 	l.PassHostHeader = &defaultPassHostHeader
+}
+
+// +k8s:deepcopy-gen=true
+
+type Algorithm struct {
+	RoundRobin         *RoundRobin         `json:"roundRobin,omitempty" toml:"roundRobin,omitempty" yaml:"roundRobin,omitempty"`
+	LowestResponseTime *LowestResponseTime `json:"lowestResponseTime,omitempty" toml:"lowestResponseTime,omitempty" yaml:"lowestResponseTime,omitempty"`
+	LeastUtilized      *LeastUtilized      `json:"leastUtilized,omitempty" toml:"leastUtilized,omitempty" yaml:"leastUtilized,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+
+type RoundRobin struct {
+}
+
+// +k8s:deepcopy-gen=true
+
+type LowestResponseTime struct {
+	Epsilon float64       `json:"epsilon,omitempty" toml:"epsilon,omitempty" yaml:"epsilon,omitempty"`
+	Window  time.Duration `json:"window,omitempty" toml:"window,omitempty" yaml:"window,omitempty"`
+}
+
+func (m *LowestResponseTime) SetDefaults() {
+	m.Epsilon = 10
+	m.Window = 60 * time.Second
+}
+
+// +k8s:deepcopy-gen=true
+
+type LeastUtilized struct {
+	Epsilon float64       `json:"epsilon,omitempty" toml:"epsilon,omitempty" yaml:"epsilon,omitempty"`
+	Window  time.Duration `json:"window,omitempty" toml:"window,omitempty" yaml:"window,omitempty"`
+}
+
+func (m *LeastUtilized) SetDefaults() {
+	m.Epsilon = 1
+	m.Window = 60 * time.Second
 }
 
 // +k8s:deepcopy-gen=true

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/containous/traefik/v2/pkg/server/loadbalancer/lowestrt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -339,7 +340,18 @@ func (m *Manager) getRoundRobinLoadBalancer(ctx context.Context, serviceName str
 func (m *Manager) getLowestResponseTimeBalancer(ctx context.Context, serviceName string, service *dynamic.ServersLoadBalancer, fwd http.Handler) (healthcheck.BalancerHandler, error) {
 	logger := log.FromContext(ctx)
 	logger.Debug("Creating lowest response time load-balancer")
-	panic("not implemented") // TODO
+
+	lb, err := lowestrt.New(fwd, service.Algorithm.LowestResponseTime)
+	if err != nil {
+		return nil, err
+	}
+
+	lbsu := healthcheck.NewLBStatusUpdater(lb, m.configs[serviceName])
+	if err := m.upsertServers(ctx, lbsu, service.Servers); err != nil {
+		return nil, fmt.Errorf("error configuring load balancer for service %s: %w", serviceName, err)
+	}
+
+	return lb, err
 }
 
 func (m *Manager) getLeastUtilizedBalancer(ctx context.Context, serviceName string, service *dynamic.ServersLoadBalancer, fwd http.Handler) (healthcheck.BalancerHandler, error) {
